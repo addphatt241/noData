@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors'
 import config from './config/config';
@@ -15,7 +16,6 @@ import { errorConverter } from './middlewares/error';
 import routes from './routes/index';
 import mongoose from 'mongoose';
 import logger from './config/logger';
-import { getHeartBeatNameNode1, getHeartBeatNameNode2, getHeartBeatNameNode3 } from './controllers/namenode/namdenode.controller';
 
 dotenv.config({ path: path.join(__dirname, '../../.env') })
 
@@ -37,6 +37,7 @@ app.use(mongoSanitize());
 
 app.use(cors());
 app.options('*', cors());
+
 
 
 let server: any;
@@ -89,12 +90,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next(new ApiError(httpStatus.NOT_FOUND, 'Not found'));
 });
 
-getHeartBeatNameNode1();
-getHeartBeatNameNode2();
-getHeartBeatNameNode3();
 
 app.use(errorConverter);
 
 app.use(errorHandler);
+
+
 
 export default app

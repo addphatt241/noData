@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "start:namenode": " nx serve namenode",
+    "start:datanode1": " nx serve datanode1",
     "dev:namenode": "node apps/namenode/src/index.ts"
   },
   "private": true,

@@ -8,7 +8,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') })
 // Xác thực biến môi trường
 const envVarsSchema = Joi.object()
     .keys({
-        NODE_ENV: Joi.string().valid('production', 'development','Namenode').required(),
+        NODE_ENV: Joi.string().valid('production', 'development','Datanode1').required(),
         PORT: Joi.number().default(3000),
         MONGODB_URL: Joi.string().required().description('Mongo DB url'),
         JWT_SECRET: Joi.string().required().description('JWT secret key'),
@@ -35,7 +35,7 @@ const config = {
     env: envVars.NODE_ENV,
     port: envVars.PORT_NAMENODE,
     mongoose: {
-        url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'Namenode' ? '-Namenode' : ''),
+        url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'Datanode1' ? '-Datanode1' : ''),
         options: {
             useCreateIndex: true,
             useNewUrlParser: true,
