@@ -5,6 +5,8 @@
   "scripts": {
     "start:namenode": " nx serve namenode",
     "start:datanode1": " nx serve datanode1",
+    "start:datanode2": " nx serve datanode2",
+    "start:datanode3": " nx serve datanode3",
     "dev:namenode": "node apps/namenode/src/index.ts"
   },
   "private": true,

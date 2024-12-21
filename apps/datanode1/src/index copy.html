@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <title>Upload</title>
+</head>
+
+<body>
+    <div style="display: flex;flex-direction: column;">
+        <h1>Write</h1>
+        <form id="form" enctype="multipart/form-data">
+            <label for="name">Name File</label>
+            <input type="text" name="name" id="" required>
+            <label for="description">description</label>
+            <input type="text" name="description" id="" required>
+            <label for="image">image</label>
+            <input type="file" id="image" onchange="handleFileUpload()">
+            <button>Submit</button>
+        </form>
+        <h1>Read</h1>
+        <form id="form_Read">
+            <label for="name">Name File</label>
+            <input type="text" name="name" id="" required>
+            <button>Read</button>
+        </form>
+        <button id="btn">Download image</button>
+        <img id="imageElement" src="" alt="">
+
+
+    </div>
+</body>
+
+<script>
+    let uploadFile
+    let SizeFileUpload
+    let typeFile
+    let dataimage = ''
+
+    function SplitFile(file, numberChunk) {
+        const Files = [];
+        const sizeFile = file.length
+        const chunkSize = []
+
+        if (sizeFile % numberChunk !== 0) {
+            var mod = sizeFile - sizeFile % numberChunk
+            for (let i = 0; i < numberChunk; i++) {
+                chunkSize.push(i * mod / numberChunk)
+
+            }
+            chunkSize.push(numberChunk * mod / numberChunk + sizeFile % numberChunk)
+            // console.log(chunkSize)
+            for (let i = 1; i < chunkSize.length; i += 1) {
+                Files.push(file.slice(chunkSize[i - 1], chunkSize[i - 1] + chunkSize[i]));
+            }
+        }
+        else {
+            for (let i = 0; i < sizeFile; i += sizeFile / numberChunk) {
+                Files.push(file.slice(i, i + sizeFile / numberChunk));
+            }
+        }
+        console.log(Files)
+        return Files;
+    }
+
+    function handleFileUpload() {
+        const fileInput = document.getElementById('image');
+        if (fileInput.files.length > 0) {
+            const uploadedFile = fileInput.files[0];
+            SizeFileUpload = uploadedFile.size
+            const fileReader = new FileReader();
+            fileReader.onload = function (event) {
+                uploadFile = event.target.result;
+            };
+            fileReader.readAsDataURL(uploadedFile);
+        } else {
+            console.error('No file selected.');
+        }
+    }
+
+
+    let form = document.getElementById('form')
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        let formData = new FormData(form)
+        formData.append("size", SizeFileUpload)
+
+        let data = Object.fromEntries(formData)
+        console.log(data)
+        await axios.post('http://localhost:1611/api/namenode/uploadFile', data)
+            .then((res) => {
+                console.log('data', res.data)
+                let numberChunk = res.data.numberChunk
+                let metaDatas = res.data.metaDatas
+                console.log(metaDatas)
+                console.log(numberChunk)
+                let Files = SplitFile(uploadFile, numberChunk)
+                console.log(uploadFile)
+                console.log(Files)
+
+                Promise.all([
+                    axios.post(`${metaDatas[0].datanode}/api/datanode/upload`, { ...metaDatas[0], file: Files[0] }),
+                    axios.post(`${metaDatas[1].datanode}/api/datanode/upload`, { ...metaDatas[1], file: Files[1] }),
+                    axios.post(`${metaDatas[2].datanode}/api/datanode/upload`, { ...metaDatas[2], file: Files[2] })
+                ])
+                    .then(res => { console.log(res) })
+                    .catch((err) => console.log(err))
+            })
+    })
+
+
+
+
+    let imageElement = document.getElementById('imageElement')
+    let form_Read = document.getElementById('form_Read')
+    form_Read.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        let formDataRead = new FormData(form_Read)
+        formDataRead.append("Request", "read")
+        let data = Object.fromEntries(formDataRead)
+        console.log(data)
+        await axios.get(`http://localhost:1611/api/namenode/readFile?name=${data.name}`,)
+            .then((res) => {
+                if (res.data == 'Not in DB') {
+                    console.log('No co file')
+                }
+                else {
+                    console.log(res)
+                    var metadata = res.data.metadata
+                    console.log(metadata)
+                    Promise.all([
+                        axios.get(`${metadata[0].datanode}/api/datanode/read?name=${metadata[0].name}&index=${metadata[0].index}`),
+                        axios.get(`${metadata[1].datanode}/api/datanode/read?name=${metadata[1].name}&index=${metadata[1].index}`),
+                        axios.get(`${metadata[2].datanode}/api/datanode/read?name=${metadata[2].name}&index=${metadata[2].index}`)
+                    ])
+                        .then(res => {
+                            console.log(res)
+                            var datas = ''
+                            res.forEach((element, index) => {
+                                var data = element.data.file
+                                datas = datas + data
+                            })
+
+                            // console.log(datas)
+                            imageElement.setAttribute("src", datas);
+                            dataimage = datas
+
+                        })
+                        .catch((err) => console.log(err))
+                }
+            })
+    })
+
+
+
+    async function downloadImage(imageSrc, nameOfDownload = 'my-image.png',) {
+        const response = await fetch(imageSrc);
+
+        const blobImage = await response.blob();
+
+        const href = URL.createObjectURL(blobImage);
+
+        const anchorElement = document.createElement('a');
+        anchorElement.href = href;
+        anchorElement.download = nameOfDownload;
+
+        document.body.appendChild(anchorElement);
+        anchorElement.click();
+
+        document.body.removeChild(anchorElement);
+        window.URL.revokeObjectURL(href);
+    }
+
+    const btn = document.getElementById('btn');
+
+    btn.addEventListener('click', () => {
+        downloadImage(
+            dataimage,
+            'my-image.png',
+        )
+            .then(() => {
+                console.log('The image has been downloaded');
+                console.log(dataimage);
+
+            })
+            .catch(err => {
+                console.log('Error downloading image: ', err);
+            });
+    });
+
+</script>
+
+</html>

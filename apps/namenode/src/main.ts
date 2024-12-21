@@ -15,7 +15,7 @@ import { errorConverter } from './middlewares/error';
 import routes from './routes/index';
 import mongoose from 'mongoose';
 import logger from './config/logger';
-import { getHeartBeatNameNode1, getHeartBeatNameNode2, getHeartBeatNameNode3 } from './controllers/namenode/namdenode.controller';
+import { getHeartBeatNameNode1, getHeartBeatNameNode2, getHeartBeatNameNode3 } from './controllers/namenode/namenode.controller';
 
 dotenv.config({ path: path.join(__dirname, '../../.env') })
 

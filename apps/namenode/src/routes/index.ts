@@ -3,7 +3,7 @@ import express from 'express';
 import authRoute from './core/auth.route';
 
 import userRoute from './core/user.route';
-
+import namenodeRoute from './namenode/namenode.route';
 
 import config from '../config/config';
 
@@ -19,6 +19,10 @@ const defaultRoutes = [
   {
     path: '/users',
     route: userRoute,
+  },
+  {
+    path: '/namenode',
+    route: namenodeRoute,
   },
 
 ];

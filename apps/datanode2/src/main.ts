@@ -19,7 +19,6 @@ import logger from './config/logger';
 
 dotenv.config({ path: path.join(__dirname, '../../.env') })
 
-
 const app = express();
 
 if (config.env !== 'Namenode') {
