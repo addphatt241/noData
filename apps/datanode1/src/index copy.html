@@ -14,8 +14,6 @@
         <form id="form" enctype="multipart/form-data">
             <label for="name">Name File</label>
             <input type="text" name="name" id="" required>
-            <label for="description">description</label>
-            <input type="text" name="description" id="" required>
             <label for="image">image</label>
             <input type="file" id="image" onchange="handleFileUpload()">
             <button>Submit</button>
@@ -28,7 +26,6 @@
         </form>
         <button id="btn">Download image</button>
         <img id="imageElement" src="" alt="">
-
 
     </div>
 </body>
@@ -110,9 +107,6 @@
             })
     })
 
-
-
-
     let imageElement = document.getElementById('imageElement')
     let form_Read = document.getElementById('form_Read')
     form_Read.addEventListener('submit', async (e) => {
@@ -152,7 +146,6 @@
                 }
             })
     })
-
 
 
     async function downloadImage(imageSrc, nameOfDownload = 'my-image.png',) {

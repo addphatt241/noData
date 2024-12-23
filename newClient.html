@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <title>Upload</title>
+</head>
+
+<body>
+    <div style="display: flex;flex-direction: column;">
+        <h1>Write</h1>
+        <form id="form" enctype="multipart/form-data">
+            <label for="name">Name File</label>
+            <input type="text" name="name" id="" required>
+            <label for="image">image</label>
+            <input type="file" id="image" onchange="handleFileUpload()">
+            <button>Submit</button>
+        </form>
+        <h1>Read</h1>
+        <form id="form_Read">
+            <label for="name">Name File</label>
+            <input type="text" name="name" id="" required>
+            <button>Read</button>
+        </form>
+        <button id="btn">Download image</button>
+        <img id="imageElement" src="" alt="">
+
+    </div>
+</body>
+
+<script>
+    let Chunks;
+    let fileUpload;
+
+    function SplitFile(file, numberChunk) {
+        const Files = [];
+        const sizeFile = file.size;
+        const chunkSize = Math.ceil(sizeFile / numberChunk);
+
+        for (let i = 0; i < numberChunk; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, sizeFile);
+            Files.push(file.slice(start, end));
+        }
+
+        console.log(Files);
+        return Files;
+    }
+
+    function mergeFile(chunks) {
+        // Gộp tất cả các phần tệp thành một Blob duy nhất
+        return new Blob(chunks);
+    }
+
+    function handleFileUpload() {
+        const fileInput = document.getElementById('image');
+        if (fileInput.files.length > 0) {
+
+            fileUpload = fileInput.files[0];
+            console.log(`File Name: ${fileUpload.name}`);
+            console.log(`File Size: ${fileUpload.size} bytes`);
+            console.log(`File Type: ${fileUpload.type}`);
+
+            const numberChunk = 3;
+            Chunks = SplitFile(fileUpload, numberChunk);
+
+
+            Chunks.forEach((chunk, index) => {
+                console.log(`Uploading chunk ${index + 1}...`, chunk);
+            });
+        } else {
+            console.error('No file selected.');
+        }
+    }
+
+    let form = document.getElementById('form')
+
+    function mergeFile(chunks) {
+        // Gộp tất cả các phần tệp thành một Blob duy nhất
+        return new Blob(chunks);
+    }
+    form.addEventListener('submit', async (e) => {
+        try {
+            e.preventDefault();
+            let formData = new FormData(form);
+            formData.append("size", fileUpload.size);
+
+            let data = Object.fromEntries(formData);
+            console.log(data);
+
+            const response = await axios.post('http://localhost:1611/api/namenode/uploadFile', data);
+            console.log("data", response.data);
+
+            let metaDatas = response.data.metaDatas;
+            console.log(Chunks[1])
+            console.log(metaDatas);
+
+
+            const mergedBlob = mergeFile(Chunks);
+
+            // Tạo URL và tải về tệp đã gộp
+            const url = URL.createObjectURL(mergedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mergedFile'; // Đặt tên tệp khi tải xuống
+            a.click(); // Kích hoạt tải xuống
+            URL.revokeObjectURL(url)
+
+            const uploadPromises = metaDatas.map((metaData, i) => {
+                let chunkFormData = new FormData();
+                chunkFormData.append('file', Chunks[i]);
+                chunkFormData.append('name', metaData.name);
+                chunkFormData.append('index', metaData.index);
+                chunkFormData.append('datanodeReplication1', metaData.datanodeReplication1);
+                chunkFormData.append('datanodeReplication2', metaData.datanodeReplication2);
+                console.log(`${metaData.datanode}/api/datanode/upload`)
+                return axios.post(`${metaData.datanode}/api/datanode/upload`, chunkFormData);
+            });
+
+            const results = await Promise.allSettled(uploadPromises);
+
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled') {
+                    console.log(`Upload thành công đến Datanode ${index + 1}:`, result.value.data);
+                } else {
+                    console.error(`Upload thất bại đến Datanode ${index + 1}:`, result.reason);
+                }
+            });
+
+        } catch (err) {
+            console.error('Lỗi xảy ra:', err);
+        }
+    });
+
+    let imageElement = document.getElementById('imageElement')
+    let form_Read = document.getElementById('form_Read')
+    form_Read.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        let formDataRead = new FormData(form_Read)
+        let data = Object.fromEntries(formDataRead)
+        await axios.get(`http://localhost:1611/api/namenode/readFile?name=${data.name}`,)
+            .then((res) => {
+                if (res.data == 'Not in DB') {
+                    console.log('No co file')
+                }
+                else {
+                    console.log(res)
+                    var metadata = res.data.metadata
+                    console.log(metadata)
+                    Promise.all([
+                        axios.get(`${metadata[0].datanode}/api/datanode/read?name=${metadata[0].name}&index=${metadata[0].index}`),
+                        axios.get(`${metadata[1].datanode}/api/datanode/read?name=${metadata[1].name}&index=${metadata[1].index}`),
+                        axios.get(`${metadata[2].datanode}/api/datanode/read?name=${metadata[2].name}&index=${metadata[2].index}`)
+                    ])
+                        .then(responses => {
+                            let chunks = [];
+                            responses.forEach((response, index) => {
+                                console.log(response.data);
+                                chunks.push(new Uint8Array(response.data.file.data));
+                            });
+                            console.log(chunks)
+                            const mergedBlob = new Blob(chunks, { type: 'image/png' });
+
+                            const url = URL.createObjectURL(mergedBlob);
+
+
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'mergedFile.png';
+                            a.click();
+
+                            URL.revokeObjectURL(url);
+                        })
+                        .catch((err) => console.log(err))
+                }
+            })
+    })
+
+
+    function mergeBlobs(blobs) {
+        return new Blob(blobs, { type: 'application/octet-stream' });
+    }
+</script>

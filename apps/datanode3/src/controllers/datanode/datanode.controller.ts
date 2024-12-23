@@ -2,13 +2,11 @@
 import { Heartbeat } from './../../domain/namenode/heartbeat';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs'
 import HandleFile from '../../models/namenode/HandFile.model';
 import axios from 'axios';
-
+import fs from 'fs'
 
 dotenv.config({ path: path.join(__dirname, '../.env') })
-
 
 const sendHeartbeat = (req: any, res: any) => {
     const heartbeat: Heartbeat = {
@@ -30,15 +28,13 @@ const uploadFile = async (req, res) => {
     console.log(directory)
     const fullPath = path.join(directory, name);
 
-    fs.writeFileSync(fullPath,  data?.file);
+    fs.writeFileSync(fullPath, req.file.buffer);
+    const formData = new FormData();
+    formData.append('index', data?.index);
+    formData.append('name', data.name);
 
-    const fileReplication = {
-        index: data?.index,
-        name: data?.name,
-        file: data?.file,
-        datanodeReplication1: '',
-        datanodeReplication2: '',
-    }
+    const fileBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
+    formData.append('file', fileBlob, req.file.originalname);
 
     const file = {
         index: data?.index,
@@ -48,16 +44,16 @@ const uploadFile = async (req, res) => {
 
     await HandleFile
         .create(file)
-    if (data?.datanodeReplication1 != "" && data?.datanodeReplication2 != "") {
+    if (data?.datanodeReplication1  && data?.datanodeReplication2 ) {
         Promise.all([
-            axios.post(`${data?.datanodeReplication1}/api/datanode/upload`, fileReplication),
-            axios.post(`${data?.datanodeReplication2}/api/datanode/upload`, fileReplication)
+            axios.post(`${data?.datanodeReplication1}/api/datanode/upload`, formData),
+            axios.post(`${data?.datanodeReplication2}/api/datanode/upload`, formData)
         ])
-            .then(res => { console.log(res) })
-            .catch((err) => console.log(err))
+            .then(res => { console.log("Save Oke") })
+            .catch((err) => console.log(`Lỗi ${err}`))
     }
     else {
-        console.log("Oke")
+        console.log("Save Replication Oke")
     }
     res.send('Upload File Succes')
 }
@@ -69,11 +65,11 @@ const readFile = async (req, res) => {
         .then(async (data) => {
             console.log(data)
             try {
-                const file = fs.readFileSync(data[0].urlFile, "utf-8");
+                const fileBuffer = fs.readFileSync(data[0].urlFile);
                 const datafile = {
                     index: data[0].index,
                     name: data[0].name,
-                    file: file
+                    file: fileBuffer
                 }
                 res.send(datafile)
             }

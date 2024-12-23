@@ -19,10 +19,10 @@ const checkUploadFile = async (req, res) => {
         numberChunk = 3;
     }
     else if (size >= MB150 && size <= MB200) {
-        numberChunk = 4;
+        numberChunk = 3;
     }
     else {
-        numberChunk = 5;
+        numberChunk = 3;
     }
 
     await ManagerDatanode.findOne({ namenodeId: "123qwe" })
