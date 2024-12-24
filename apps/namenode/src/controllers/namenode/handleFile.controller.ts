@@ -6,9 +6,9 @@ import httpStatus from 'http-status';
 
 dotenv.config({ path: path.join(__dirname, '../.env') })
 
-const checkUploadFile = async (req, res) => {
+const checkUploadFile = async (req , res) => {
     const dataBody = req.body;
-    // console.log(data)
+    console.log(dataBody)
     let numberChunk;
 
     const size = Number(dataBody?.size);
@@ -19,10 +19,10 @@ const checkUploadFile = async (req, res) => {
         numberChunk = 3;
     }
     else if (size >= MB150 && size <= MB200) {
-        numberChunk = 3;
+        numberChunk = 4;
     }
     else {
-        numberChunk = 3;
+        numberChunk = 5;
     }
 
     await ManagerDatanode.findOne({ namenodeId: "123qwe" })
@@ -63,6 +63,8 @@ const checkUploadFile = async (req, res) => {
             for (let i = 0; i < numberChunk; i++) {
                 metaDatas.push({
                     name: dataBody?.name,
+                    type: dataBody?.type,
+                    fileName: dataBody?.fileName,
                     index: i + 1,
                     datanode: datanodeWrite[i]?.address,
                     datanodeReplication1: datanodeReplication1[i]?.address,
@@ -70,7 +72,6 @@ const checkUploadFile = async (req, res) => {
                 })
             }
 
-            // console.log(metaDatas)
             await MetaData.insertMany(metaDatas)
                 .then(
                     res.send({
@@ -78,10 +79,7 @@ const checkUploadFile = async (req, res) => {
                         numberChunk: numberChunk,
                     })
                 )
-
         })
-
-
 }
 
 function getRandom(arr) {
@@ -117,7 +115,8 @@ const checkReadFile = async (req, res) => {
                                 metaDatas.push({
                                     name: e?.name,
                                     index: e?.index,
-                                    datanode: e?.datanode
+                                    datanode: e?.datanode,
+                                    type: e?.type
                                 })
                                 return;
                             }
@@ -125,7 +124,8 @@ const checkReadFile = async (req, res) => {
                                 metaDatas.push({
                                     name: e?.name,
                                     index: e?.index,
-                                    datanode: e?.datanodeReplication1
+                                    datanode: e?.datanodeReplication1,
+                                    type: e?.type
                                 })
                                 return;
                             }
@@ -133,7 +133,8 @@ const checkReadFile = async (req, res) => {
                                 metaDatas.push({
                                     name: e?.name,
                                     index: e?.index,
-                                    datanode: e?.datanodeReplication2
+                                    datanode: e?.datanodeReplication2,
+                                    type: e?.type
                                 })
                                 return;
                             }

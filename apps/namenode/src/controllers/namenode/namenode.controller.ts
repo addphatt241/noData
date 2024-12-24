@@ -41,7 +41,6 @@ export const getHeartBeatNameNode1 = () => {
                 })
             })
     }, 3000)
-
 }
 
 export const getHeartBeatNameNode2 = () => {

@@ -81,32 +81,32 @@
         // Gộp tất cả các phần tệp thành một Blob duy nhất
         return new Blob(chunks);
     }
+
     form.addEventListener('submit', async (e) => {
         try {
             e.preventDefault();
             let formData = new FormData(form);
             formData.append("size", fileUpload.size);
+            formData.append("type", fileUpload.type);
+            formData.append("fileName", fileUpload.name);
 
             let data = Object.fromEntries(formData);
             console.log(data);
 
             const response = await axios.post('http://localhost:1611/api/namenode/uploadFile', data);
             console.log("data", response.data);
+            let numberChunk = response.data.numberChunk;
+
+            Chunks = SplitFile(fileUpload, numberChunk);
+
+            Chunks.forEach((chunk, index) => {
+                console.log(`Uploading chunk ${index + 1}...`, chunk);
+            });
 
             let metaDatas = response.data.metaDatas;
+
             console.log(Chunks[1])
             console.log(metaDatas);
-
-
-            const mergedBlob = mergeFile(Chunks);
-
-            // Tạo URL và tải về tệp đã gộp
-            const url = URL.createObjectURL(mergedBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'mergedFile'; // Đặt tên tệp khi tải xuống
-            a.click(); // Kích hoạt tải xuống
-            URL.revokeObjectURL(url)
 
             const uploadPromises = metaDatas.map((metaData, i) => {
                 let chunkFormData = new FormData();
@@ -141,43 +141,39 @@
         let formDataRead = new FormData(form_Read)
         let data = Object.fromEntries(formDataRead)
         await axios.get(`http://localhost:1611/api/namenode/readFile?name=${data.name}`,)
-            .then((res) => {
+            .then(async (res) => {
                 if (res.data == 'Not in DB') {
                     console.log('No co file')
                 }
                 else {
                     console.log(res)
                     var metadata = res.data.metadata
-                    console.log(metadata)
-                    Promise.all([
-                        axios.get(`${metadata[0].datanode}/api/datanode/read?name=${metadata[0].name}&index=${metadata[0].index}`),
-                        axios.get(`${metadata[1].datanode}/api/datanode/read?name=${metadata[1].name}&index=${metadata[1].index}`),
-                        axios.get(`${metadata[2].datanode}/api/datanode/read?name=${metadata[2].name}&index=${metadata[2].index}`)
-                    ])
-                        .then(responses => {
-                            let chunks = [];
-                            responses.forEach((response, index) => {
-                                console.log(response.data);
-                                chunks.push(new Uint8Array(response.data.file.data));
-                            });
-                            console.log(chunks)
-                            const mergedBlob = new Blob(chunks, { type: 'image/png' });
 
-                            const url = URL.createObjectURL(mergedBlob);
+                    const readPromise = metadata.map((meta, i) => {
+                        console.log(meta)
+                        return axios.get(`${metadata[i].datanode}/api/datanode/read?name=${metadata[i].name}&index=${metadata[i].index}`)
+                    })
+                    const result = await Promise.allSettled(readPromise);
+                    let chunks = []
+                    result.forEach((res, index)=>{
+                        console.log(res)
+                        chunks.push(new Uint8Array(res.value.data.file.data))
+                    })
+
+                    const mergedBlob = new Blob(chunks, { type: metadata[0].type });
+
+                    const url = URL.createObjectURL(mergedBlob);
 
 
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'mergedFile.png';
-                            a.click();
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${metadata[0].name}.${metadata[0].type.split('/')[1]}`;
+                    a.click();
 
-                            URL.revokeObjectURL(url);
-                        })
-                        .catch((err) => console.log(err))
+                    URL.revokeObjectURL(url);
                 }
             })
     })
-
 
     function mergeBlobs(blobs) {
         return new Blob(blobs, { type: 'application/octet-stream' });
