@@ -93,7 +93,7 @@
             let data = Object.fromEntries(formData);
             console.log(data);
 
-            const response = await axios.post('http://localhost:1611/api/namenode/uploadFile', data);
+            const response = await axios.post('http://192.168.1.88:1611/api/namenode/uploadFile', data);
             console.log("data", response.data);
             let numberChunk = response.data.numberChunk;
 
@@ -140,7 +140,7 @@
         e.preventDefault()
         let formDataRead = new FormData(form_Read)
         let data = Object.fromEntries(formDataRead)
-        await axios.get(`http://localhost:1611/api/namenode/readFile?name=${data.name}`,)
+        await axios.get(`http://192.168.1.88:1611/api/namenode/readFile?name=${data.name}`,)
             .then(async (res) => {
                 if (res.data == 'Not in DB') {
                     console.log('No co file')
